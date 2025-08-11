@@ -1,0 +1,325 @@
+# =============================================================================
+# AUTHENTICATION API PATHS - CREDIT DECISION LLM RAG PLATFORM
+# =============================================================================
+
+/api/auth/login:
+  post:
+    tags:
+      - Authentication
+    summary: User login
+    description: |
+      Authenticate a user with email and password. Returns a JWT token for subsequent API calls.
+      
+      **Rate Limit**: 5 requests per minute per IP address
+    operationId: login
+    security: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/LoginRequest'
+          examples:
+            admin_login:
+              summary: Admin user login
+              value:
+                email: admin@creditdecision.com
+                password: admin123
+            analyst_login:
+              summary: Credit analyst login
+              value:
+                email: analyst@creditdecision.com
+                password: analyst123
+    responses:
+      '200':
+        description: Login successful
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginResponse'
+            examples:
+              success:
+                summary: Successful login
+                value:
+                  success: true
+                  data:
+                    user:
+                      id: "550e8400-e29b-41d4-a716-446655440000"
+                      email: "admin@creditdecision.com"
+                      firstName: "Admin"
+                      lastName: "User"
+                      role: "ADMIN"
+                      permissions: ["*"]
+                      createdAt: "2024-01-01T00:00:00Z"
+                      updatedAt: "2024-01-01T00:00:00Z"
+                    token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    refreshToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    expiresAt: "2024-01-01T01:00:00Z"
+                  timestamp: "2024-01-01T00:00:00Z"
+      '400':
+        description: Invalid request data
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APIResponse'
+            examples:
+              validation_error:
+                summary: Validation error
+                value:
+                  success: false
+                  error:
+                    code: "VALIDATION_ERROR"
+                    message: "Invalid email format"
+                    details:
+                      field: "email"
+                      value: "invalid-email"
+                  timestamp: "2024-01-01T00:00:00Z"
+      '401':
+        description: Invalid credentials
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APIResponse'
+            examples:
+              invalid_credentials:
+                summary: Invalid credentials
+                value:
+                  success: false
+                  error:
+                    code: "INVALID_CREDENTIALS"
+                    message: "Invalid email or password"
+                  timestamp: "2024-01-01T00:00:00Z"
+      '429':
+        description: Rate limit exceeded
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APIResponse'
+            examples:
+              rate_limit:
+                summary: Rate limit exceeded
+                value:
+                  success: false
+                  error:
+                    code: "RATE_LIMIT_EXCEEDED"
+                    message: "Too many login attempts. Please try again later."
+                  timestamp: "2024-01-01T00:00:00Z"
+
+/api/auth/logout:
+  post:
+    tags:
+      - Authentication
+    summary: User logout
+    description: |
+      Logout the current user and invalidate the JWT token.
+    operationId: logout
+    responses:
+      '200':
+        description: Logout successful
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APIResponse'
+            examples:
+              success:
+                summary: Successful logout
+                value:
+                  success: true
+                  data:
+                    message: "Logged out successfully"
+                  timestamp: "2024-01-01T00:00:00Z"
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APIResponse'
+
+/api/auth/me:
+  get:
+    tags:
+      - Authentication
+    summary: Get current user profile
+    description: |
+      Retrieve the profile information of the currently authenticated user.
+    operationId: getCurrentUser
+    responses:
+      '200':
+        description: User profile retrieved successfully
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/APIResponse'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/User'
+            examples:
+              success:
+                summary: User profile
+                value:
+                  success: true
+                  data:
+                    id: "550e8400-e29b-41d4-a716-446655440000"
+                    email: "analyst@creditdecision.com"
+                    firstName: "Credit"
+                    lastName: "Analyst"
+                    role: "CREDIT_ANALYST"
+                    permissions: ["applications:view", "applications:create", "decisions:make"]
+                    lastLoginAt: "2024-01-01T00:00:00Z"
+                    createdAt: "2024-01-01T00:00:00Z"
+                    updatedAt: "2024-01-01T00:00:00Z"
+                  timestamp: "2024-01-01T00:00:00Z"
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APIResponse'
+
+/api/auth/refresh:
+  post:
+    tags:
+      - Authentication
+    summary: Refresh JWT token
+    description: |
+      Refresh an expired JWT token using a valid refresh token.
+    operationId: refreshToken
+    security: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              refreshToken:
+                type: string
+                description: Valid refresh token
+            required:
+              - refreshToken
+          examples:
+            refresh_request:
+              summary: Token refresh request
+              value:
+                refreshToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    responses:
+      '200':
+        description: Token refreshed successfully
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/APIResponse'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        token:
+                          type: string
+                          description: New JWT token
+                        refreshToken:
+                          type: string
+                          description: New refresh token
+                        expiresAt:
+                          type: string
+                          format: date-time
+                          description: Token expiration timestamp
+                      required:
+                        - token
+                        - refreshToken
+                        - expiresAt
+      '401':
+        description: Invalid refresh token
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APIResponse'
+
+/api/auth/register:
+  post:
+    tags:
+      - Authentication
+    summary: Register new user
+    description: |
+      Register a new user account. Requires admin privileges.
+      
+      **Required Permission**: `users:create`
+    operationId: register
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              email:
+                type: string
+                format: email
+                description: User email address
+              password:
+                type: string
+                minLength: 8
+                description: User password (minimum 8 characters)
+              firstName:
+                type: string
+                description: User first name
+              lastName:
+                type: string
+                description: User last name
+              role:
+                type: string
+                enum: ['CREDIT_MANAGER', 'CREDIT_ANALYST', 'RISK_ANALYST', 'COMPLIANCE_OFFICER', 'VIEWER']
+                description: User role
+              permissions:
+                type: array
+                items:
+                  type: string
+                description: User permissions (optional, defaults based on role)
+            required:
+              - email
+              - password
+              - firstName
+              - lastName
+              - role
+          examples:
+            analyst_registration:
+              summary: Register credit analyst
+              value:
+                email: "new.analyst@creditdecision.com"
+                password: "securePassword123"
+                firstName: "New"
+                lastName: "Analyst"
+                role: "CREDIT_ANALYST"
+    responses:
+      '201':
+        description: User registered successfully
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/APIResponse'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/User'
+      '400':
+        description: Invalid request data
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APIResponse'
+      '403':
+        description: Insufficient permissions
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APIResponse'
+      '409':
+        description: User already exists
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APIResponse'

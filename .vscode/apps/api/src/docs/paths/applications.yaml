@@ -1,0 +1,451 @@
+# =============================================================================
+# APPLICATIONS API PATHS - CREDIT DECISION LLM RAG PLATFORM
+# =============================================================================
+
+/api/credit/applications:
+  get:
+    tags:
+      - Applications
+    summary: List credit applications
+    description: |
+      Retrieve a paginated list of credit applications with optional filtering and sorting.
+      
+      **Required Permission**: `applications:view`
+    operationId: listApplications
+    parameters:
+      - name: page
+        in: query
+        description: Page number (1-based)
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: limit
+        in: query
+        description: Number of items per page
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: status
+        in: query
+        description: Filter by application status
+        required: false
+        schema:
+          type: string
+          enum: ['DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'RISK_ASSESSMENT', 'PENDING_REVIEW', 'DECISION_PENDING', 'APPROVED', 'DECLINED', 'CONDITIONAL_APPROVAL', 'COUNTER_OFFER']
+      - name: purpose
+        in: query
+        description: Filter by loan purpose
+        required: false
+        schema:
+          type: string
+          enum: ['PERSONAL', 'BUSINESS', 'AUTO', 'HOME', 'EDUCATION', 'DEBT_CONSOLIDATION', 'MEDICAL', 'OTHER']
+      - name: minAmount
+        in: query
+        description: Minimum requested amount
+        required: false
+        schema:
+          type: number
+          minimum: 0
+      - name: maxAmount
+        in: query
+        description: Maximum requested amount
+        required: false
+        schema:
+          type: number
+          minimum: 0
+      - name: sortBy
+        in: query
+        description: Field to sort by
+        required: false
+        schema:
+          type: string
+          enum: ['submittedAt', 'requestedAmount', 'status', 'applicantName']
+          default: 'submittedAt'
+      - name: sortOrder
+        in: query
+        description: Sort order
+        required: false
+        schema:
+          type: string
+          enum: ['asc', 'desc']
+          default: 'desc'
+      - name: search
+        in: query
+        description: Search in application number, applicant name, or email
+        required: false
+        schema:
+          type: string
+    responses:
+      '200':
+        description: Applications retrieved successfully
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/APIResponse'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        items:
+                          type: array
+                          items:
+                            $ref: '#/components/schemas/CreditApplication'
+                        pagination:
+                          $ref: '#/components/schemas/PaginationInfo'
+                      required:
+                        - items
+                        - pagination
+      '400':
+        description: Invalid query parameters
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APIResponse'
+      '403':
+        description: Insufficient permissions
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APIResponse'
+
+  post:
+    tags:
+      - Applications
+    summary: Create new credit application
+    description: |
+      Create a new credit application with applicant information.
+      
+      **Required Permission**: `applications:create`
+    operationId: createApplication
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              requestedAmount:
+                type: number
+                minimum: 1000
+                maximum: 10000000
+                description: Requested loan amount
+              currency:
+                type: string
+                enum: ['USD', 'EUR', 'GBP', 'CAD', 'AUD']
+                default: 'USD'
+                description: Currency code
+              purpose:
+                type: string
+                enum: ['PERSONAL', 'BUSINESS', 'AUTO', 'HOME', 'EDUCATION', 'DEBT_CONSOLIDATION', 'MEDICAL', 'OTHER']
+                description: Loan purpose
+              termMonths:
+                type: integer
+                minimum: 6
+                maximum: 360
+                description: Loan term in months
+              applicantData:
+                type: object
+                properties:
+                  personal:
+                    $ref: '#/components/schemas/PersonalInfo'
+                  financial:
+                    $ref: '#/components/schemas/FinancialInfo'
+                  employment:
+                    $ref: '#/components/schemas/EmploymentInfo'
+                required:
+                  - personal
+                  - financial
+                  - employment
+            required:
+              - requestedAmount
+              - purpose
+              - termMonths
+              - applicantData
+          examples:
+            personal_loan:
+              summary: Personal loan application
+              value:
+                requestedAmount: 50000
+                currency: "USD"
+                purpose: "PERSONAL"
+                termMonths: 60
+                applicantData:
+                  personal:
+                    firstName: "John"
+                    lastName: "Doe"
+                    dateOfBirth: "1985-06-15"
+                    ssn: "123-45-6789"
+                    email: "john.doe@email.com"
+                    phone: "555-123-4567"
+                    address:
+                      street: "123 Main St"
+                      city: "Anytown"
+                      state: "CA"
+                      zipCode: "12345"
+                      country: "USA"
+                      residenceType: "OWN"
+                      monthsAtAddress: 24
+                    maritalStatus: "MARRIED"
+                    dependents: 2
+                    citizenship: "US"
+                  financial:
+                    annualIncome: 75000
+                    monthlyIncome: 6250
+                    monthlyExpenses: 3500
+                    creditScore: 720
+                    debtToIncomeRatio: 0.35
+                    existingDebts: []
+                    assets: []
+                    bankingHistory:
+                      primaryBank: "Bank of America"
+                      accountAge: 60
+                      averageBalance: 8000
+                      overdraftHistory: 1
+                      returnedChecks: 0
+                  employment:
+                    employerName: "Tech Corp"
+                    jobTitle: "Software Engineer"
+                    employmentType: "FULL_TIME"
+                    monthsEmployed: 36
+                    industryType: "TECHNOLOGY"
+    responses:
+      '201':
+        description: Application created successfully
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/APIResponse'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/CreditApplication'
+      '400':
+        description: Invalid application data
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APIResponse'
+      '403':
+        description: Insufficient permissions
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APIResponse'
+
+/api/credit/applications/{id}:
+  get:
+    tags:
+      - Applications
+    summary: Get application by ID
+    description: |
+      Retrieve detailed information about a specific credit application.
+      
+      **Required Permission**: `applications:view`
+    operationId: getApplication
+    parameters:
+      - name: id
+        in: path
+        description: Application ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: Application retrieved successfully
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/APIResponse'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/CreditApplication'
+      '404':
+        description: Application not found
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APIResponse'
+      '403':
+        description: Insufficient permissions
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APIResponse'
+
+  put:
+    tags:
+      - Applications
+    summary: Update application
+    description: |
+      Update an existing credit application. Only applications in DRAFT status can be updated.
+      
+      **Required Permission**: `applications:update`
+    operationId: updateApplication
+    parameters:
+      - name: id
+        in: path
+        description: Application ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              requestedAmount:
+                type: number
+                minimum: 1000
+                maximum: 10000000
+              purpose:
+                type: string
+                enum: ['PERSONAL', 'BUSINESS', 'AUTO', 'HOME', 'EDUCATION', 'DEBT_CONSOLIDATION', 'MEDICAL', 'OTHER']
+              termMonths:
+                type: integer
+                minimum: 6
+                maximum: 360
+              applicantData:
+                type: object
+                properties:
+                  personal:
+                    $ref: '#/components/schemas/PersonalInfo'
+                  financial:
+                    $ref: '#/components/schemas/FinancialInfo'
+                  employment:
+                    $ref: '#/components/schemas/EmploymentInfo'
+    responses:
+      '200':
+        description: Application updated successfully
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/APIResponse'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/CreditApplication'
+      '400':
+        description: Invalid application data or status
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APIResponse'
+      '404':
+        description: Application not found
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APIResponse'
+      '403':
+        description: Insufficient permissions
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APIResponse'
+
+  delete:
+    tags:
+      - Applications
+    summary: Delete application
+    description: |
+      Delete a credit application. Only applications in DRAFT status can be deleted.
+      
+      **Required Permission**: `applications:delete`
+    operationId: deleteApplication
+    parameters:
+      - name: id
+        in: path
+        description: Application ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: Application deleted successfully
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APIResponse'
+      '400':
+        description: Cannot delete application in current status
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APIResponse'
+      '404':
+        description: Application not found
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APIResponse'
+      '403':
+        description: Insufficient permissions
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APIResponse'
+
+/api/credit/applications/{id}/submit:
+  post:
+    tags:
+      - Applications
+    summary: Submit application for review
+    description: |
+      Submit a draft application for review. Changes the status from DRAFT to SUBMITTED.
+      
+      **Required Permission**: `applications:update`
+    operationId: submitApplication
+    parameters:
+      - name: id
+        in: path
+        description: Application ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: Application submitted successfully
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/APIResponse'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/CreditApplication'
+      '400':
+        description: Application cannot be submitted in current status
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APIResponse'
+      '404':
+        description: Application not found
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APIResponse'
+      '403':
+        description: Insufficient permissions
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APIResponse'
