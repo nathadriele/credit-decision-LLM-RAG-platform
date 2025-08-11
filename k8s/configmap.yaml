@@ -1,0 +1,90 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: credit-decision-config
+  namespace: credit-decision
+  labels:
+    app.kubernetes.io/name: credit-decision-config
+    app.kubernetes.io/component: configuration
+    app.kubernetes.io/part-of: credit-decision-platform
+data:
+  # Application Configuration
+  NODE_ENV: "production"
+  LOG_LEVEL: "info"
+  
+  # API Configuration
+  API_PORT: "3001"
+  API_HOST: "0.0.0.0"
+  
+  # Frontend Configuration
+  WEB_PORT: "3000"
+  WEB_HOST: "0.0.0.0"
+  
+  # AWS Configuration
+  AWS_REGION: "us-east-1"
+  
+  # Vector Database Configuration
+  VECTOR_DB_TYPE: "chromadb"
+  CHROMADB_HOST: "chromadb-service"
+  CHROMADB_PORT: "8000"
+  CHROMADB_COLLECTION_NAME: "credit_documents"
+  
+  # Embedding Configuration
+  EMBEDDING_MODEL: "text-embedding-ada-002"
+  EMBEDDING_DIMENSION: "1536"
+  CHUNK_SIZE: "1000"
+  CHUNK_OVERLAP: "200"
+  
+  # LLM Configuration
+  OPENAI_MODEL: "gpt-4-turbo-preview"
+  OPENAI_MAX_TOKENS: "4096"
+  OPENAI_TEMPERATURE: "0.1"
+  
+  # Rate Limiting
+  RATE_LIMIT_WINDOW_MS: "900000"
+  RATE_LIMIT_MAX_REQUESTS: "100"
+  
+  # CORS Configuration
+  CORS_ORIGIN: "https://credit-decision.yourcompany.com"
+  
+  # Feature Flags
+  ENABLE_ADVANCED_RAG: "true"
+  ENABLE_MULTI_MODEL_INFERENCE: "false"
+  ENABLE_REAL_TIME_MONITORING: "true"
+  ENABLE_AUDIT_LOGGING: "true"
+  ENABLE_A_B_TESTING: "false"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: credit-decision-secrets
+  namespace: credit-decision
+  labels:
+    app.kubernetes.io/name: credit-decision-secrets
+    app.kubernetes.io/component: secrets
+    app.kubernetes.io/part-of: credit-decision-platform
+type: Opaque
+stringData:
+  # Database Configuration
+  DATABASE_URL: "postgresql://username:password@postgres-service:5432/credit_decision_db"
+  
+  # Redis Configuration
+  REDIS_URL: "redis://redis-service:6379"
+  
+  # OpenAI Configuration
+  OPENAI_API_KEY: "sk-your-openai-api-key-here"
+  
+  # AWS Bedrock Configuration (if using)
+  AWS_ACCESS_KEY_ID: "your-aws-access-key"
+  AWS_SECRET_ACCESS_KEY: "your-aws-secret-key"
+  
+  # JWT Configuration
+  JWT_SECRET: "your-super-secret-jwt-key-here"
+  
+  # External Services
+  SENDGRID_API_KEY: "your-sendgrid-api-key"
+  SLACK_WEBHOOK_URL: "https://hooks.slack.com/services/your/slack/webhook"
+  
+  # Monitoring
+  DYNATRACE_API_TOKEN: "your-dynatrace-api-token"
+  GRAFANA_API_KEY: "your-grafana-api-key"
