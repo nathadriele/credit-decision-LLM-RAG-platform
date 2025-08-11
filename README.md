@@ -1,12 +1,48 @@
-# Credit Decision LLM RAG Platform 
+# Credit Decision LLM RAG Platform | In progress! 🔄
 
-### In progress 🔄
+### Linguagens e Frameworks
+![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=flat-square&logo=node.js)
+![TypeScript](https://img.shields.io/badge/TypeScript-5+-3178C6?style=flat-square&logo=typescript)
+![Next.js](https://img.shields.io/badge/Next.js-14-black?style=flat-square&logo=next.js)
+![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react)
+![Express.js](https://img.shields.io/badge/Express.js-Backend-black?style=flat-square&logo=express)
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
-[![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://www.docker.com/)
-[![Production Ready](https://img.shields.io/badge/Production-Ready-brightgreen.svg)](#)
+### AI e Machine Learning
+![LangChain](https://img.shields.io/badge/LangChain-LLM-orange?style=flat-square)
+![LangGraph](https://img.shields.io/badge/LangGraph-Orchestration-orange?style=flat-square)
+![OpenAI](https://img.shields.io/badge/OpenAI-API-412991?style=flat-square&logo=openai)
+![AI](https://img.shields.io/badge/AI-LLM%20%7C%20RAG-orange?style=flat-square)
+
+### Infraestrutura
+![Docker](https://img.shields.io/badge/Docker-Production_Ready-2496ED?style=flat-square&logo=docker)
+![Kubernetes](https://img.shields.io/badge/Kubernetes-EKS-326CE5?style=flat-square&logo=kubernetes)
+![AWS](https://img.shields.io/badge/AWS-Bedrock%20%7C%20S3%20%7C%20EKS%20%7C%20Lambda-FF9900?style=flat-square&logo=amazon-aws)
+![Azure](https://img.shields.io/badge/Azure-Cloud_Services-0078D4?style=flat-square&logo=microsoft-azure)
+![GCP](https://img.shields.io/badge/GCP-Cloud_Services-4285F4?style=flat-square&logo=google-cloud)
+
+### Banco de Dados e Armazenamento
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-336791?style=flat-square&logo=postgresql)
+![Redis](https://img.shields.io/badge/Redis-Cache_and_Sessions-DC382D?style=flat-square&logo=redis)
+![Vector DB](https://img.shields.io/badge/Vector_DB-FAISS%20%7C%20Pinecone%20%7C%20ChromaDB-FF6F00?style=flat-square)
+
+### Observabilidade e Monitoramento
+![Prometheus](https://img.shields.io/badge/Prometheus-Metrics-orange?style=flat-square&logo=prometheus)
+![Grafana](https://img.shields.io/badge/Grafana-Dashboards-F46800?style=flat-square&logo=grafana)
+![Dynatrace](https://img.shields.io/badge/Dynatrace-Monitoring-1496FF?style=flat-square&logo=dynatrace)
+
+### Qualidade e Testes
+![Tests](https://img.shields.io/badge/Tests-Unit%20%7C%20Integration%20%7C%20E2E-blue?style=flat-square)
+![Coverage](https://img.shields.io/badge/Coverage-100%25-brightgreen?style=flat-square)
+![Lint](https://img.shields.io/badge/Code_Style-ESLint-informational?style=flat-square&logo=eslint)
+![Type Check](https://img.shields.io/badge/Type_Check-TypeScript-blue?style=flat-square&logo=typescript)
+
+### CI/CD e Deploy
+![CI/CD](https://img.shields.io/badge/CI/CD-GitHub%20Actions%20%7C%20Docker%20%7C%20Kubernetes-2088FF?style=flat-square&logo=github-actions)
+![Deploy](https://img.shields.io/badge/Deploy-AWS%20%7C%20Azure%20%7C%20GCP-yellow?style=flat-square&logo=amazon-aws)
+
+### Documentação
+![Docs](https://img.shields.io/badge/Docs-API%20%7C%20Architecture%20%7C%20Deployment%20Guides-blue?style=flat-square&logo=readthedocs)
+![Documentation Status](https://img.shields.io/badge/Documentation-Complete-brightgreen?style=flat-square)
 
 **Revolutionary AI-powered credit decision platform** that transforms traditional lending through Large Language Models (LLMs) and Retrieval-Augmented Generation (RAG) technology.
 
