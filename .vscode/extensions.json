@@ -1,0 +1,84 @@
+{
+  "recommendations": [
+    // TypeScript & JavaScript
+    "ms-vscode.vscode-typescript-next",
+    "bradlc.vscode-tailwindcss",
+    "ms-vscode.vscode-json",
+    
+    // React & Next.js
+    "ms-vscode.vscode-react-native",
+    "formulahendry.auto-rename-tag",
+    "christian-kohler.path-intellisense",
+    
+    // Code Quality & Formatting
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+    "ms-vscode.vscode-eslint",
+    "streetsidesoftware.code-spell-checker",
+    
+    // Testing
+    "orta.vscode-jest",
+    "ms-playwright.playwright",
+    
+    // Git & Version Control
+    "eamodio.gitlens",
+    "github.vscode-pull-request-github",
+    "github.copilot",
+    "github.copilot-chat",
+    
+    // Docker & Kubernetes
+    "ms-azuretools.vscode-docker",
+    "ms-kubernetes-tools.vscode-kubernetes-tools",
+    "redhat.vscode-yaml",
+    
+    // AWS & Cloud
+    "amazonwebservices.aws-toolkit-vscode",
+    "hashicorp.terraform",
+    
+    // Database
+    "ms-mssql.mssql",
+    "cweijan.vscode-postgresql-client2",
+    "cweijan.vscode-redis-client",
+    
+    // Productivity
+    "ms-vscode.vscode-todo-highlight",
+    "gruntfuggly.todo-tree",
+    "aaron-bond.better-comments",
+    "usernamehw.errorlens",
+    "christian-kohler.npm-intellisense",
+    "ms-vscode.vscode-npm-script",
+    
+    // Themes & UI
+    "johnpapa.vscode-peacock",
+    "pkief.material-icon-theme",
+    "github.github-vscode-theme",
+    
+    // AI & LLM Development
+    "ms-python.python",
+    "ms-toolsai.jupyter",
+    "ms-toolsai.vscode-jupyter-keymap",
+    
+    // API Development
+    "humao.rest-client",
+    "42crunch.vscode-openapi",
+    "ms-vscode.vscode-json",
+    
+    // Documentation
+    "yzhang.markdown-all-in-one",
+    "davidanson.vscode-markdownlint",
+    "bierner.markdown-mermaid",
+    
+    // Performance & Monitoring
+    "ms-vscode.vscode-performance",
+    "ms-vscode.hexeditor",
+    
+    // Security
+    "ms-vscode.vscode-security",
+    "snyk-security.snyk-vulnerability-scanner"
+  ],
+  "unwantedRecommendations": [
+    "ms-vscode.vscode-typescript",
+    "hookyqr.beautify",
+    "ms-vscode.vscode-css"
+  ]
+}
