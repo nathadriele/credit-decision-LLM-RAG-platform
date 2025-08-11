@@ -1,0 +1,253 @@
+# =============================================================================
+# PROMETHEUS ALERT RULES - CREDIT DECISION LLM RAG PLATFORM
+# =============================================================================
+
+groups:
+  # Application Health Alerts
+  - name: credit-decision-health
+    rules:
+      - alert: APIServiceDown
+        expr: up{job="credit-decision-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: api
+        annotations:
+          summary: "Credit Decision API service is down"
+          description: "The Credit Decision API service has been down for more than 1 minute."
+          runbook_url: "https://docs.creditdecision.com/runbooks/api-down"
+
+      - alert: WebServiceDown
+        expr: up{job="credit-decision-web"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: web
+        annotations:
+          summary: "Credit Decision Web service is down"
+          description: "The Credit Decision Web service has been down for more than 2 minutes."
+
+      - alert: DatabaseDown
+        expr: up{job="postgres"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          service: database
+        annotations:
+          summary: "PostgreSQL database is down"
+          description: "The PostgreSQL database has been down for more than 30 seconds."
+
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: warning
+          service: cache
+        annotations:
+          summary: "Redis cache is down"
+          description: "The Redis cache service has been down for more than 1 minute."
+
+      - alert: ChromaDBDown
+        expr: up{job="chromadb"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          service: vectordb
+        annotations:
+          summary: "ChromaDB vector database is down"
+          description: "The ChromaDB vector database has been down for more than 2 minutes."
+
+  # Performance Alerts
+  - name: credit-decision-performance
+    rules:
+      - alert: HighAPIResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="credit-decision-api"}[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+          service: api
+        annotations:
+          summary: "High API response time"
+          description: "95th percentile API response time is {{ $value }}s, which is above the 2s threshold."
+
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{job="credit-decision-api",status=~"5.."}[5m]) / rate(http_requests_total{job="credit-decision-api"}[5m]) > 0.05
+        for: 3m
+        labels:
+          severity: critical
+          service: api
+        annotations:
+          summary: "High API error rate"
+          description: "API error rate is {{ $value | humanizePercentage }}, which is above the 5% threshold."
+
+      - alert: HighDatabaseConnections
+        expr: pg_stat_database_numbackends{datname="credit_decision_db"} > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: database
+        annotations:
+          summary: "High database connection count"
+          description: "Database has {{ $value }} active connections, which is above the 80 connection threshold."
+
+      - alert: DatabaseSlowQueries
+        expr: rate(pg_stat_statements_mean_time_seconds[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+          service: database
+        annotations:
+          summary: "Slow database queries detected"
+          description: "Average query time is {{ $value }}s, which is above the 1s threshold."
+
+  # Resource Usage Alerts
+  - name: credit-decision-resources
+    rules:
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is {{ $value }}% on instance {{ $labels.instance }}."
+
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value }}% on instance {{ $labels.instance }}."
+
+      - alert: LowDiskSpace
+        expr: (1 - (node_filesystem_avail_bytes{fstype!="tmpfs"} / node_filesystem_size_bytes{fstype!="tmpfs"})) * 100 > 90
+        for: 5m
+        labels:
+          severity: critical
+          service: system
+        annotations:
+          summary: "Low disk space"
+          description: "Disk usage is {{ $value }}% on {{ $labels.device }} of instance {{ $labels.instance }}."
+
+      - alert: HighContainerMemoryUsage
+        expr: (container_memory_usage_bytes{name!=""} / container_spec_memory_limit_bytes{name!=""}) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+          service: container
+        annotations:
+          summary: "High container memory usage"
+          description: "Container {{ $labels.name }} memory usage is {{ $value }}%."
+
+  # Business Logic Alerts
+  - name: credit-decision-business
+    rules:
+      - alert: HighApplicationVolume
+        expr: rate(credit_applications_created_total[5m]) * 3600 > 1000
+        for: 10m
+        labels:
+          severity: warning
+          service: business
+        annotations:
+          summary: "High application volume"
+          description: "Application creation rate is {{ $value }} per hour, which is above normal levels."
+
+      - alert: HighDecisionLatency
+        expr: histogram_quantile(0.95, rate(credit_decision_duration_seconds_bucket[5m])) > 30
+        for: 5m
+        labels:
+          severity: warning
+          service: business
+        annotations:
+          summary: "High credit decision latency"
+          description: "95th percentile decision time is {{ $value }}s, which is above the 30s threshold."
+
+      - alert: AIServiceFailures
+        expr: rate(ai_requests_failed_total[5m]) / rate(ai_requests_total[5m]) > 0.1
+        for: 3m
+        labels:
+          severity: critical
+          service: ai
+        annotations:
+          summary: "High AI service failure rate"
+          description: "AI service failure rate is {{ $value | humanizePercentage }}, which is above the 10% threshold."
+
+      - alert: LowDecisionConfidence
+        expr: avg_over_time(credit_decision_confidence[15m]) < 0.7
+        for: 10m
+        labels:
+          severity: warning
+          service: business
+        annotations:
+          summary: "Low average decision confidence"
+          description: "Average decision confidence is {{ $value }}, which is below the 0.7 threshold."
+
+  # Security Alerts
+  - name: credit-decision-security
+    rules:
+      - alert: HighFailedLoginAttempts
+        expr: rate(auth_login_failures_total[5m]) * 300 > 50
+        for: 2m
+        labels:
+          severity: warning
+          service: security
+        annotations:
+          summary: "High failed login attempts"
+          description: "Failed login rate is {{ $value }} per 5 minutes, indicating possible brute force attack."
+
+      - alert: UnauthorizedAPIAccess
+        expr: rate(http_requests_total{status="401"}[5m]) * 300 > 100
+        for: 3m
+        labels:
+          severity: warning
+          service: security
+        annotations:
+          summary: "High unauthorized access attempts"
+          description: "Unauthorized access rate is {{ $value }} per 5 minutes."
+
+      - alert: SuspiciousUserActivity
+        expr: rate(user_actions_total{action=~"delete|modify"}[5m]) * 3600 > 100
+        for: 5m
+        labels:
+          severity: warning
+          service: security
+        annotations:
+          summary: "Suspicious user activity detected"
+          description: "High rate of sensitive user actions: {{ $value }} per hour."
+
+  # Data Quality Alerts
+  - name: credit-decision-data-quality
+    rules:
+      - alert: HighDataValidationErrors
+        expr: rate(data_validation_errors_total[5m]) / rate(credit_applications_created_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          service: data-quality
+        annotations:
+          summary: "High data validation error rate"
+          description: "Data validation error rate is {{ $value | humanizePercentage }}."
+
+      - alert: DatabaseReplicationLag
+        expr: pg_stat_replication_lag_seconds > 60
+        for: 2m
+        labels:
+          severity: warning
+          service: database
+        annotations:
+          summary: "Database replication lag"
+          description: "Database replication lag is {{ $value }}s, which is above the 60s threshold."
+
+      - alert: VectorDatabaseSyncIssues
+        expr: chromadb_collection_sync_lag_seconds > 300
+        for: 5m
+        labels:
+          severity: warning
+          service: vectordb
+        annotations:
+          summary: "Vector database sync issues"
+          description: "ChromaDB collection sync lag is {{ $value }}s."

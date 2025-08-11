@@ -1,0 +1,263 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Credit Decision Platform - Overview",
+    "tags": ["credit-decision", "overview"],
+    "style": "dark",
+    "timezone": "browser",
+    "refresh": "30s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "System Health",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "up{job=~\"credit-decision-.*\"}",
+            "legendFormat": "{{job}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "green", "value": 1}
+              ]
+            },
+            "mappings": [
+              {"options": {"0": {"text": "Down"}}, "type": "value"},
+              {"options": {"1": {"text": "Up"}}, "type": "value"}
+            ]
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "Request Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{job=\"credit-decision-api\"}[5m])",
+            "legendFormat": "{{method}} {{endpoint}}"
+          }
+        ],
+        "yAxes": [
+          {"label": "Requests/sec", "min": 0}
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "Response Time",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(http_request_duration_seconds_bucket{job=\"credit-decision-api\"}[5m]))",
+            "legendFormat": "50th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job=\"credit-decision-api\"}[5m]))",
+            "legendFormat": "95th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(http_request_duration_seconds_bucket{job=\"credit-decision-api\"}[5m]))",
+            "legendFormat": "99th percentile"
+          }
+        ],
+        "yAxes": [
+          {"label": "Seconds", "min": 0}
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+      },
+      {
+        "id": 4,
+        "title": "Error Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{job=\"credit-decision-api\",status=~\"4..\"}[5m])",
+            "legendFormat": "4xx errors"
+          },
+          {
+            "expr": "rate(http_requests_total{job=\"credit-decision-api\",status=~\"5..\"}[5m])",
+            "legendFormat": "5xx errors"
+          }
+        ],
+        "yAxes": [
+          {"label": "Errors/sec", "min": 0}
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+      },
+      {
+        "id": 5,
+        "title": "Applications Created",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "increase(credit_applications_created_total[1h])",
+            "legendFormat": "Last Hour"
+          },
+          {
+            "expr": "increase(credit_applications_created_total[24h])",
+            "legendFormat": "Last 24 Hours"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "unit": "short"
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 0, "y": 16}
+      },
+      {
+        "id": 6,
+        "title": "Decisions Made",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "increase(credit_decisions_made_total[1h])",
+            "legendFormat": "Last Hour"
+          },
+          {
+            "expr": "increase(credit_decisions_made_total[24h])",
+            "legendFormat": "Last 24 Hours"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "unit": "short"
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 6, "y": 16}
+      },
+      {
+        "id": 7,
+        "title": "Decision Distribution",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "increase(credit_decisions_made_total{decision=\"APPROVED\"}[24h])",
+            "legendFormat": "Approved"
+          },
+          {
+            "expr": "increase(credit_decisions_made_total{decision=\"DECLINED\"}[24h])",
+            "legendFormat": "Declined"
+          },
+          {
+            "expr": "increase(credit_decisions_made_total{decision=\"CONDITIONAL_APPROVAL\"}[24h])",
+            "legendFormat": "Conditional"
+          },
+          {
+            "expr": "increase(credit_decisions_made_total{decision=\"PENDING_REVIEW\"}[24h])",
+            "legendFormat": "Pending Review"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+      },
+      {
+        "id": 8,
+        "title": "AI Service Performance",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(ai_requests_total[5m])",
+            "legendFormat": "AI Requests/sec"
+          },
+          {
+            "expr": "rate(ai_requests_failed_total[5m])",
+            "legendFormat": "AI Failures/sec"
+          }
+        ],
+        "yAxes": [
+          {"label": "Requests/sec", "min": 0}
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24}
+      },
+      {
+        "id": 9,
+        "title": "Database Performance",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(pg_stat_database_tup_inserted{datname=\"credit_decision_db\"}[5m])",
+            "legendFormat": "Inserts/sec"
+          },
+          {
+            "expr": "rate(pg_stat_database_tup_updated{datname=\"credit_decision_db\"}[5m])",
+            "legendFormat": "Updates/sec"
+          },
+          {
+            "expr": "rate(pg_stat_database_tup_deleted{datname=\"credit_decision_db\"}[5m])",
+            "legendFormat": "Deletes/sec"
+          }
+        ],
+        "yAxes": [
+          {"label": "Operations/sec", "min": 0}
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24}
+      },
+      {
+        "id": 10,
+        "title": "Memory Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "container_memory_usage_bytes{name=~\"credit-decision-.*\"} / 1024 / 1024",
+            "legendFormat": "{{name}}"
+          }
+        ],
+        "yAxes": [
+          {"label": "MB", "min": 0}
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 32}
+      },
+      {
+        "id": 11,
+        "title": "CPU Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(container_cpu_usage_seconds_total{name=~\"credit-decision-.*\"}[5m]) * 100",
+            "legendFormat": "{{name}}"
+          }
+        ],
+        "yAxes": [
+          {"label": "Percent", "min": 0, "max": 100}
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 32}
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "environment",
+          "type": "query",
+          "query": "label_values(up, environment)",
+          "current": {"text": "production", "value": "production"}
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "Deployments",
+          "datasource": "Prometheus",
+          "expr": "changes(up{job=\"credit-decision-api\"}[5m]) > 0",
+          "titleFormat": "Deployment",
+          "textFormat": "Service restarted"
+        }
+      ]
+    }
+  }
+}
