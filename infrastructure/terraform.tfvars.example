@@ -1,0 +1,115 @@
+# =============================================================================
+# TERRAFORM VARIABLES EXAMPLE - CREDIT DECISION LLM RAG PLATFORM
+# =============================================================================
+# Copy this file to terraform.tfvars and customize the values for your environment
+
+# =============================================================================
+# GENERAL CONFIGURATION
+# =============================================================================
+project_name = "credit-decision-llm-rag"
+environment  = "development"  # development, staging, production
+owner        = "platform-team"
+aws_region   = "us-east-1"
+
+# =============================================================================
+# NETWORKING CONFIGURATION
+# =============================================================================
+vpc_cidr = "10.0.0.0/16"
+
+private_subnet_cidrs = [
+  "10.0.1.0/24",
+  "10.0.2.0/24",
+  "10.0.3.0/24"
+]
+
+public_subnet_cidrs = [
+  "10.0.101.0/24",
+  "10.0.102.0/24",
+  "10.0.103.0/24"
+]
+
+# =============================================================================
+# EKS CONFIGURATION
+# =============================================================================
+kubernetes_version = "1.28"
+
+eks_node_instance_types = ["t3.medium", "t3.large"]
+eks_node_group_min_size = 1
+eks_node_group_max_size = 10
+eks_node_group_desired_size = 3
+
+# =============================================================================
+# DATABASE CONFIGURATION
+# =============================================================================
+postgres_version = "15.4"
+rds_instance_class = "db.t3.micro"  # Use db.r5.large or higher for production
+rds_allocated_storage = 20
+rds_max_allocated_storage = 100
+rds_backup_retention_period = 7
+
+database_name = "credit_decision_db"
+database_username = "postgres"
+database_password = "your-secure-password-here"  # Change this!
+
+# =============================================================================
+# REDIS CONFIGURATION
+# =============================================================================
+redis_node_type = "cache.t3.micro"  # Use cache.r6g.large or higher for production
+redis_num_cache_nodes = 1
+
+# =============================================================================
+# MONITORING CONFIGURATION
+# =============================================================================
+enable_cloudwatch_logs = true
+log_retention_days = 30
+enable_xray_tracing = true
+
+# =============================================================================
+# SECURITY CONFIGURATION
+# =============================================================================
+enable_encryption_at_rest = true
+enable_encryption_in_transit = true
+
+# Restrict this to your organization's IP ranges in production
+allowed_cidr_blocks = ["0.0.0.0/0"]
+
+# =============================================================================
+# COST OPTIMIZATION
+# =============================================================================
+enable_spot_instances = false  # Set to true for development to save costs
+enable_auto_scaling = true
+
+# =============================================================================
+# FEATURE FLAGS
+# =============================================================================
+enable_gpu_nodes = false      # Set to true if you need GPU for AI workloads
+enable_bedrock = true         # AWS Bedrock for LLM inference
+enable_opensearch = false     # OpenSearch for advanced search capabilities
+enable_lambda_functions = true
+
+# =============================================================================
+# PRODUCTION OVERRIDES
+# =============================================================================
+# For production environment, consider these values:
+
+# rds_instance_class = "db.r5.xlarge"
+# rds_allocated_storage = 100
+# rds_max_allocated_storage = 1000
+# rds_backup_retention_period = 30
+
+# redis_node_type = "cache.r6g.xlarge"
+# redis_num_cache_nodes = 3
+
+# eks_node_instance_types = ["m5.large", "m5.xlarge"]
+# eks_node_group_min_size = 3
+# eks_node_group_max_size = 20
+# eks_node_group_desired_size = 6
+
+# log_retention_days = 90
+# enable_spot_instances = false
+# enable_gpu_nodes = true
+
+# allowed_cidr_blocks = [
+#   "10.0.0.0/8",     # Your corporate network
+#   "172.16.0.0/12",  # Your VPN range
+# ]
