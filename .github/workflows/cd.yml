@@ -1,0 +1,348 @@
+# =============================================================================
+# CD WORKFLOW - CREDIT DECISION LLM RAG PLATFORM
+# =============================================================================
+
+name: Continuous Deployment
+
+on:
+  repository_dispatch:
+    types: [deploy-staging, deploy-production]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      image_tag:
+        description: 'Docker image tag to deploy'
+        required: true
+        default: 'latest'
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # =============================================================================
+  # DEPLOYMENT PREPARATION
+  # =============================================================================
+  
+  prepare-deployment:
+    name: Prepare Deployment
+    runs-on: ubuntu-latest
+    
+    outputs:
+      environment: ${{ steps.set-env.outputs.environment }}
+      image_tag: ${{ steps.set-env.outputs.image_tag }}
+      deploy_url: ${{ steps.set-env.outputs.deploy_url }}
+      
+    steps:
+      - name: Set environment variables
+        id: set-env
+        run: |
+          if [[ "${{ github.event_name }}" == "repository_dispatch" ]]; then
+            if [[ "${{ github.event.action }}" == "deploy-staging" ]]; then
+              echo "environment=staging" >> $GITHUB_OUTPUT
+              echo "deploy_url=https://staging.credit-decision.yourcompany.com" >> $GITHUB_OUTPUT
+            else
+              echo "environment=production" >> $GITHUB_OUTPUT
+              echo "deploy_url=https://credit-decision.yourcompany.com" >> $GITHUB_OUTPUT
+            fi
+            echo "image_tag=${{ github.event.client_payload.sha }}" >> $GITHUB_OUTPUT
+          else
+            echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+            echo "image_tag=${{ github.event.inputs.image_tag }}" >> $GITHUB_OUTPUT
+            if [[ "${{ github.event.inputs.environment }}" == "production" ]]; then
+              echo "deploy_url=https://credit-decision.yourcompany.com" >> $GITHUB_OUTPUT
+            else
+              echo "deploy_url=https://staging.credit-decision.yourcompany.com" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+  # =============================================================================
+  # STAGING DEPLOYMENT
+  # =============================================================================
+  
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: prepare-deployment
+    if: needs.prepare-deployment.outputs.environment == 'staging'
+    environment:
+      name: staging
+      url: ${{ needs.prepare-deployment.outputs.deploy_url }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          
+      - name: Configure kubectl
+        run: |
+          aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name ${{ secrets.EKS_CLUSTER_NAME_STAGING }}
+          
+      - name: Deploy to staging
+        run: |
+          export IMAGE_TAG="${{ needs.prepare-deployment.outputs.image_tag }}"
+          export ENVIRONMENT="staging"
+          export DOCKER_REGISTRY="${{ env.REGISTRY }}"
+          ./scripts/deploy.sh staging
+          
+      - name: Run smoke tests
+        run: |
+          sleep 60  # Wait for deployment to stabilize
+          ./scripts/smoke-tests.sh staging
+          
+      - name: Update deployment status
+        if: always()
+        run: |
+          if [[ "${{ job.status }}" == "success" ]]; then
+            echo "✅ Staging deployment successful"
+          else
+            echo "❌ Staging deployment failed"
+            exit 1
+          fi
+
+  # =============================================================================
+  # PRODUCTION DEPLOYMENT
+  # =============================================================================
+  
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: prepare-deployment
+    if: needs.prepare-deployment.outputs.environment == 'production'
+    environment:
+      name: production
+      url: ${{ needs.prepare-deployment.outputs.deploy_url }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          
+      - name: Configure kubectl
+        run: |
+          aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name ${{ secrets.EKS_CLUSTER_NAME_PRODUCTION }}
+          
+      - name: Pre-deployment checks
+        run: |
+          # Check if image exists
+          docker manifest inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-api:${{ needs.prepare-deployment.outputs.image_tag }}
+          docker manifest inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-web:${{ needs.prepare-deployment.outputs.image_tag }}
+          
+          # Check cluster health
+          kubectl get nodes
+          kubectl get pods -n credit-decision
+          
+      - name: Create database backup
+        run: |
+          kubectl exec -n credit-decision postgres-0 -- pg_dump -U postgres credit_decision > backup-$(date +%Y%m%d-%H%M%S).sql
+          aws s3 cp backup-*.sql s3://${{ secrets.BACKUP_BUCKET }}/database/
+          
+      - name: Deploy to production (Blue-Green)
+        run: |
+          export IMAGE_TAG="${{ needs.prepare-deployment.outputs.image_tag }}"
+          export ENVIRONMENT="production"
+          export DOCKER_REGISTRY="${{ env.REGISTRY }}"
+          export DEPLOYMENT_STRATEGY="blue-green"
+          ./scripts/deploy.sh production
+          
+      - name: Run production smoke tests
+        run: |
+          sleep 120  # Wait for deployment to stabilize
+          ./scripts/smoke-tests.sh production
+          
+      - name: Switch traffic to new deployment
+        run: |
+          ./scripts/switch-traffic.sh green
+          
+      - name: Monitor deployment
+        run: |
+          ./scripts/monitor-deployment.sh 300  # Monitor for 5 minutes
+          
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "Deployment failed, rolling back..."
+          ./scripts/switch-traffic.sh blue
+          kubectl rollout undo deployment/api -n credit-decision
+          kubectl rollout undo deployment/web -n credit-decision
+          
+      - name: Clean up old deployment
+        if: success()
+        run: |
+          ./scripts/cleanup-old-deployment.sh blue
+          
+      - name: Update deployment status
+        if: always()
+        run: |
+          if [[ "${{ job.status }}" == "success" ]]; then
+            echo "✅ Production deployment successful"
+            # Send success notification
+            curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+              -H 'Content-type: application/json' \
+              --data '{"text":"🚀 Production deployment successful for commit ${{ needs.prepare-deployment.outputs.image_tag }}"}'
+          else
+            echo "❌ Production deployment failed"
+            # Send failure notification
+            curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+              -H 'Content-type: application/json' \
+              --data '{"text":"🚨 Production deployment failed for commit ${{ needs.prepare-deployment.outputs.image_tag }}"}'
+            exit 1
+          fi
+
+  # =============================================================================
+  # POST-DEPLOYMENT VERIFICATION
+  # =============================================================================
+  
+  post-deployment-tests:
+    name: Post-Deployment Tests
+    runs-on: ubuntu-latest
+    needs: [prepare-deployment, deploy-staging, deploy-production]
+    if: always() && (needs.deploy-staging.result == 'success' || needs.deploy-production.result == 'success')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run API tests against deployed environment
+        run: |
+          export API_BASE_URL="${{ needs.prepare-deployment.outputs.deploy_url }}"
+          npm run test:api:deployed
+          
+      - name: Run performance tests
+        run: |
+          export TARGET_URL="${{ needs.prepare-deployment.outputs.deploy_url }}"
+          npm run test:performance
+          
+      - name: Run security tests
+        run: |
+          export TARGET_URL="${{ needs.prepare-deployment.outputs.deploy_url }}"
+          npm run test:security
+          
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: post-deployment-test-results
+          path: test-results/
+          retention-days: 30
+
+  # =============================================================================
+  # MONITORING AND ALERTING SETUP
+  # =============================================================================
+  
+  setup-monitoring:
+    name: Setup Monitoring
+    runs-on: ubuntu-latest
+    needs: [prepare-deployment, deploy-staging, deploy-production]
+    if: always() && (needs.deploy-staging.result == 'success' || needs.deploy-production.result == 'success')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          
+      - name: Update CloudWatch dashboards
+        run: |
+          aws cloudwatch put-dashboard \
+            --dashboard-name "CreditDecision-${{ needs.prepare-deployment.outputs.environment }}" \
+            --dashboard-body file://monitoring/cloudwatch-dashboard.json
+            
+      - name: Update CloudWatch alarms
+        run: |
+          ./scripts/setup-cloudwatch-alarms.sh ${{ needs.prepare-deployment.outputs.environment }}
+          
+      - name: Configure log aggregation
+        run: |
+          ./scripts/setup-log-aggregation.sh ${{ needs.prepare-deployment.outputs.environment }}
+
+  # =============================================================================
+  # DEPLOYMENT SUMMARY
+  # =============================================================================
+  
+  deployment-summary:
+    name: Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [prepare-deployment, deploy-staging, deploy-production, post-deployment-tests, setup-monitoring]
+    if: always()
+    
+    steps:
+      - name: Generate deployment summary
+        run: |
+          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ needs.prepare-deployment.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Image Tag:** ${{ needs.prepare-deployment.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Deploy URL:** ${{ needs.prepare-deployment.outputs.deploy_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ needs.deploy-staging.result }}" == "success" || "${{ needs.deploy-production.result }}" == "success" ]]; then
+            echo "✅ **Status:** Deployment Successful" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Status:** Deployment Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Job Results" >> $GITHUB_STEP_SUMMARY
+          echo "- Deployment: ${{ needs.deploy-staging.result || needs.deploy-production.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Post-deployment Tests: ${{ needs.post-deployment-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Monitoring Setup: ${{ needs.setup-monitoring.result }}" >> $GITHUB_STEP_SUMMARY
+          
+      - name: Create GitHub release
+        if: needs.prepare-deployment.outputs.environment == 'production' && (needs.deploy-production.result == 'success')
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ needs.prepare-deployment.outputs.image_tag }}
+          release_name: Production Release v${{ needs.prepare-deployment.outputs.image_tag }}
+          body: |
+            ## Production Deployment
+            
+            **Deployed at:** $(date -u)
+            **Commit:** ${{ needs.prepare-deployment.outputs.image_tag }}
+            **Environment:** Production
+            **URL:** ${{ needs.prepare-deployment.outputs.deploy_url }}
+            
+            ### Changes
+            - Automated deployment from CI/CD pipeline
+            - All tests passed
+            - Monitoring and alerting configured
+            
+          draft: false
+          prerelease: false
