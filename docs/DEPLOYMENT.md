@@ -1,81 +1,90 @@
-# Deployment Guide
+# Deployment Guide - Credit Decision LLM RAG Platform
 
-This guide covers deploying the Credit Decision LLM RAG Platform across different environments.
+This guide provides comprehensive instructions for deploying the Credit Decision LLM RAG Platform in various environments.
 
-## Overview
+## Table of Contents
 
-The platform supports multiple deployment strategies:
-- **Local Development**: Docker Compose
-- **Staging/Production**: Kubernetes
-- **Cloud Providers**: AWS, GCP, Azure
-- **Container Orchestration**: Docker Swarm, Kubernetes
+- [Prerequisites](#prerequisites)
+- [Environment Configuration](#environment-configuration)
+- [Docker Deployment](#docker-deployment)
+- [Kubernetes Deployment](#kubernetes-deployment)
+- [Production Considerations](#production-considerations)
+- [Monitoring and Logging](#monitoring-and-logging)
+- [Backup and Recovery](#backup-and-recovery)
+- [Troubleshooting](#troubleshooting)
 
 ## Prerequisites
 
-### Required Tools
-- Docker 20.10+
-- Docker Compose 2.0+
-- kubectl 1.24+
-- Node.js 18+
-- npm 8+
+### System Requirements
 
-### Cloud Requirements
-- Kubernetes cluster (EKS, GKE, AKS)
-- Container registry (ECR, GCR, ACR)
-- Load balancer
-- Persistent storage
-- SSL certificates
+- **CPU**: Minimum 4 cores, Recommended 8+ cores
+- **Memory**: Minimum 8GB RAM, Recommended 16GB+ RAM
+- **Storage**: Minimum 50GB, Recommended 100GB+ SSD
+- **Network**: Stable internet connection for AI model access
+
+### Software Dependencies
+
+#### For Docker Deployment
+- Docker Engine 20.10+
+- Docker Compose 2.0+
+- Git
+
+#### For Kubernetes Deployment
+- Kubernetes cluster 1.24+
+- kubectl configured
+- Helm 3.0+ (optional)
+- Docker for building images
+
+### External Services
+- OpenAI API key (required for AI features)
+- SMTP server (for email notifications)
+- SSL certificates (for production)
 
 ## Environment Configuration
 
-### Environment Variables
-
-Create environment-specific files:
+### 1. Clone the Repository
 
 ```bash
-# .env.development
-NODE_ENV=development
-DATABASE_URL=postgresql://user:pass@localhost:5432/credit_decision_dev
-REDIS_URL=redis://localhost:6379
-OPENAI_API_KEY=your_openai_key
-JWT_SECRET=your_jwt_secret
-
-# .env.staging
-NODE_ENV=staging
-DATABASE_URL=postgresql://user:pass@staging-db:5432/credit_decision_staging
-REDIS_URL=redis://staging-redis:6379
-OPENAI_API_KEY=your_openai_key
-JWT_SECRET=your_jwt_secret
-
-# .env.production
-NODE_ENV=production
-DATABASE_URL=postgresql://user:pass@prod-db:5432/credit_decision_prod
-REDIS_URL=redis://prod-redis:6379
-OPENAI_API_KEY=your_openai_key
-JWT_SECRET=your_jwt_secret
+git clone https://github.com/nathadriele/credit-decision-llm-rag.git
+cd credit-decision-llm-rag
 ```
 
-### Secrets Management
+### 2. Configure Environment Variables
 
-For production deployments, use proper secrets management:
+Copy the appropriate environment file:
 
 ```bash
-# Kubernetes secrets
-kubectl create secret generic credit-decision-secrets \
-  --from-literal=database-url="$DATABASE_URL" \
-  --from-literal=redis-url="$REDIS_URL" \
-  --from-literal=jwt-secret="$JWT_SECRET" \
-  --from-literal=openai-api-key="$OPENAI_API_KEY"
+# For development
+cp .env.development .env
 
-# AWS Secrets Manager
-aws secretsmanager create-secret \
-  --name credit-decision/production \
-  --secret-string '{"database_url":"...","jwt_secret":"..."}'
+# For production
+cp .env.production .env
 ```
 
-## Local Development
+### 3. Update Required Variables
 
-### Docker Compose
+Edit the `.env` file and update the following critical variables:
+
+```bash
+# Required: OpenAI API Key
+OPENAI_API_KEY=sk-proj-YOUR_ACTUAL_OPENAI_API_KEY
+
+# Required: Secure passwords for production
+POSTGRES_PASSWORD=your-secure-postgres-password
+REDIS_PASSWORD=your-secure-redis-password
+JWT_SECRET=your-super-secure-jwt-secret-min-32-chars
+ENCRYPTION_KEY=your-32-character-encryption-key
+NEXTAUTH_SECRET=your-nextauth-secret-min-32-chars
+
+# Required: Domain configuration for production
+CORS_ORIGIN=https://yourdomain.com
+NEXT_PUBLIC_API_URL=https://api.yourdomain.com
+NEXTAUTH_URL=https://yourdomain.com
+```
+
+## Docker Deployment
+
+### Development Environment
 
 ```bash
 # Start all services
@@ -86,420 +95,332 @@ docker-compose logs -f
 
 # Stop services
 docker-compose down
-
-# Rebuild and start
-docker-compose up --build -d
 ```
 
-### Individual Services
+### Production Environment
 
 ```bash
-# Start database only
-docker-compose up -d postgres redis chromadb
+# Build and start production services
+docker-compose -f docker-compose.prod.yml up -d
 
-# Start API
-cd apps/api
-npm run dev
+# View logs
+docker-compose -f docker-compose.prod.yml logs -f
 
-# Start Web (in another terminal)
-cd apps/web
-npm run dev
+# Stop services
+docker-compose -f docker-compose.prod.yml down
 ```
 
-## Staging Deployment
-
-### Automated Deployment
+### Using the Deployment Script
 
 ```bash
-# Deploy to staging
-./scripts/deploy.sh staging
+# Make script executable
+chmod +x scripts/deploy.sh
+
+# Deploy development environment
+./scripts/deploy.sh development docker deploy
+
+# Deploy production environment
+./scripts/deploy.sh production docker deploy
 
 # Check deployment status
+./scripts/deploy.sh production docker status
+
+# Clean up deployment
+./scripts/deploy.sh production docker cleanup
+```
+
+## Kubernetes Deployment
+
+### 1. Prepare the Cluster
+
+```bash
+# Create namespace
+kubectl apply -f k8s/namespace.yaml
+
+# Apply secrets (update with your actual values first)
+kubectl apply -f k8s/secrets.yaml
+
+# Apply configmaps
+kubectl apply -f k8s/configmap.yaml
+```
+
+### 2. Deploy Infrastructure
+
+```bash
+# Deploy persistent volumes
+kubectl apply -f k8s/pv.yaml
+
+# Deploy services
+kubectl apply -f k8s/services.yaml
+```
+
+### 3. Deploy Applications
+
+```bash
+# Deploy applications
+kubectl apply -f k8s/deployments.yaml
+
+# Deploy ingress
+kubectl apply -f k8s/ingress.yaml
+```
+
+### 4. Verify Deployment
+
+```bash
+# Check pod status
 kubectl get pods -n credit-decision
+
+# Check services
+kubectl get services -n credit-decision
+
+# Check ingress
+kubectl get ingress -n credit-decision
 
 # View logs
 kubectl logs -f deployment/api -n credit-decision
 ```
 
-### Manual Deployment
+### Using the Deployment Script
 
 ```bash
-# Build images
-docker build -t your-registry/credit-decision-api:staging apps/api
-docker build -t your-registry/credit-decision-web:staging apps/web
-
-# Push images
-docker push your-registry/credit-decision-api:staging
-docker push your-registry/credit-decision-web:staging
-
 # Deploy to Kubernetes
-kubectl apply -f k8s/namespace.yaml
-kubectl apply -f k8s/configmap.yaml
-kubectl apply -f k8s/secrets.yaml
-kubectl apply -f k8s/postgres.yaml
-kubectl apply -f k8s/redis.yaml
-kubectl apply -f k8s/chromadb.yaml
-kubectl apply -f k8s/api.yaml
-kubectl apply -f k8s/web.yaml
-kubectl apply -f k8s/ingress.yaml
+./scripts/deploy.sh production kubernetes deploy
+
+# Check status
+./scripts/deploy.sh production kubernetes status
 ```
 
-## Production Deployment
+## Production Considerations
 
-### Pre-deployment Checklist
+### 1. SSL/TLS Configuration
 
-- [ ] Environment variables configured
-- [ ] Secrets properly managed
-- [ ] SSL certificates ready
-- [ ] Database backups configured
-- [ ] Monitoring setup
-- [ ] Alerting configured
-- [ ] Load testing completed
-- [ ] Security scan passed
-- [ ] Documentation updated
-
-### Blue-Green Deployment
+Place your SSL certificates in the `ssl/` directory:
 
 ```bash
-# Deploy to green environment
-./scripts/deploy.sh production --environment=green
-
-# Run smoke tests
-./scripts/smoke-tests.sh green
-
-# Switch traffic to green
-kubectl patch service api-service -p '{"spec":{"selector":{"version":"green"}}}'
-kubectl patch service web-service -p '{"spec":{"selector":{"version":"green"}}}'
-
-# Monitor for issues
-./scripts/monitor.sh
-
-# Rollback if needed
-kubectl patch service api-service -p '{"spec":{"selector":{"version":"blue"}}}'
-kubectl patch service web-service -p '{"spec":{"selector":{"version":"blue"}}}'
+ssl/
+├── cert.pem
+└── key.pem
 ```
 
-### Rolling Deployment
+### 2. Database Security
+
+- Use strong passwords
+- Enable SSL connections
+- Configure proper firewall rules
+- Regular security updates
+
+### 3. API Security
+
+- Configure rate limiting
+- Enable CORS properly
+- Use secure JWT secrets
+- Implement proper authentication
+
+### 4. Network Security
+
+- Use private networks
+- Configure firewalls
+- Enable DDoS protection
+- Implement WAF if needed
+
+### 5. Resource Limits
+
+Configure appropriate resource limits in production:
+
+```yaml
+resources:
+  limits:
+    memory: "2Gi"
+    cpu: "1000m"
+  requests:
+    memory: "1Gi"
+    cpu: "500m"
+```
+
+## Monitoring and Logging
+
+### Grafana Dashboard
+
+Access Grafana at `http://localhost:3003` (production deployment):
+
+- Username: `admin`
+- Password: Set in `GRAFANA_ADMIN_PASSWORD`
+
+### Prometheus Metrics
+
+Access Prometheus at `http://localhost:9090` (production deployment)
+
+### Application Logs
 
 ```bash
-# Deploy with rolling update
-kubectl set image deployment/api api=your-registry/credit-decision-api:v1.2.0
-kubectl set image deployment/web web=your-registry/credit-decision-web:v1.2.0
+# Docker
+docker-compose logs -f api
+docker-compose logs -f web
 
-# Monitor rollout
-kubectl rollout status deployment/api
-kubectl rollout status deployment/web
-
-# Rollback if needed
-kubectl rollout undo deployment/api
-kubectl rollout undo deployment/web
+# Kubernetes
+kubectl logs -f deployment/api -n credit-decision
+kubectl logs -f deployment/web -n credit-decision
 ```
-
-## Cloud Provider Specific
-
-### AWS EKS
-
-```bash
-# Create EKS cluster
-eksctl create cluster --name credit-decision --region us-east-1
-
-# Configure kubectl
-aws eks update-kubeconfig --region us-east-1 --name credit-decision
-
-# Deploy
-./scripts/deploy.sh production
-```
-
-### Google GKE
-
-```bash
-# Create GKE cluster
-gcloud container clusters create credit-decision \
-  --zone us-central1-a \
-  --num-nodes 3
-
-# Get credentials
-gcloud container clusters get-credentials credit-decision --zone us-central1-a
-
-# Deploy
-./scripts/deploy.sh production
-```
-
-### Azure AKS
-
-```bash
-# Create AKS cluster
-az aks create \
-  --resource-group credit-decision-rg \
-  --name credit-decision \
-  --node-count 3
-
-# Get credentials
-az aks get-credentials --resource-group credit-decision-rg --name credit-decision
-
-# Deploy
-./scripts/deploy.sh production
-```
-
-## Database Migration
-
-### Automated Migration
-
-```bash
-# Run migrations during deployment
-kubectl run migration-job \
-  --image=your-registry/credit-decision-api:latest \
-  --restart=Never \
-  --command -- npm run db:migrate
-```
-
-### Manual Migration
-
-```bash
-# Connect to database pod
-kubectl exec -it postgres-0 -- psql -U postgres -d credit_decision
-
-# Run specific migration
-kubectl exec -it api-pod -- npm run db:migrate:up 20241201_add_risk_assessment
-
-# Rollback migration
-kubectl exec -it api-pod -- npm run db:migrate:down 20241201_add_risk_assessment
-```
-
-## Monitoring and Observability
 
 ### Health Checks
 
-```bash
-# API health
-curl https://api.credit-decision.com/api/health
-
-# Web health
-curl https://credit-decision.com/api/health
-
-# Database health
-kubectl exec postgres-0 -- pg_isready
-
-# Redis health
-kubectl exec redis-0 -- redis-cli ping
-```
-
-### Metrics and Logs
-
-```bash
-# View application logs
-kubectl logs -f deployment/api -n credit-decision
-
-# View metrics
-kubectl port-forward service/prometheus 9090:9090
-# Open http://localhost:9090
-
-# View dashboards
-kubectl port-forward service/grafana 3000:3000
-# Open http://localhost:3000 (admin/admin)
-```
-
-## Scaling
-
-### Horizontal Pod Autoscaling
-
-```yaml
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: api-hpa
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: api
-  minReplicas: 2
-  maxReplicas: 10
-  metrics:
-  - type: Resource
-    resource:
-      name: cpu
-      target:
-        type: Utilization
-        averageUtilization: 70
-```
-
-### Manual Scaling
-
-```bash
-# Scale API pods
-kubectl scale deployment api --replicas=5
-
-# Scale Web pods
-kubectl scale deployment web --replicas=3
-
-# Scale database (if using StatefulSet)
-kubectl scale statefulset postgres --replicas=3
-```
+- API Health: `http://localhost:3001/health`
+- Web Health: `http://localhost:3000/api/health`
+- Database: `docker-compose exec postgres pg_isready`
 
 ## Backup and Recovery
 
 ### Database Backup
 
 ```bash
-# Create backup
-kubectl exec postgres-0 -- pg_dump -U postgres credit_decision > backup.sql
+# Manual backup
+docker-compose exec postgres pg_dump -U postgres credit_decision_db > backup.sql
 
-# Restore backup
-kubectl exec -i postgres-0 -- psql -U postgres credit_decision < backup.sql
+# Restore from backup
+docker-compose exec -T postgres psql -U postgres credit_decision_db < backup.sql
 ```
 
-### Persistent Volume Backup
+### Automated Backups
+
+The production deployment includes automated backup service:
 
 ```bash
-# Create volume snapshot
-kubectl create -f - <<EOF
-apiVersion: snapshot.storage.k8s.io/v1
-kind: VolumeSnapshot
-metadata:
-  name: postgres-snapshot
-spec:
-  source:
-    persistentVolumeClaimName: postgres-pvc
-EOF
+# Check backup logs
+docker-compose logs backup
+
+# Manual backup trigger
+docker-compose exec backup /backup.sh
+```
+
+### Vector Database Backup
+
+```bash
+# Backup ChromaDB data
+docker cp credit-decision-chromadb:/chroma/chroma ./chromadb-backup
+
+# Restore ChromaDB data
+docker cp ./chromadb-backup credit-decision-chromadb:/chroma/chroma
 ```
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **Pod CrashLoopBackOff**
-   ```bash
-   kubectl describe pod <pod-name>
-   kubectl logs <pod-name> --previous
-   ```
-
-2. **Service Not Accessible**
-   ```bash
-   kubectl get endpoints
-   kubectl describe service <service-name>
-   ```
-
-3. **Database Connection Issues**
-   ```bash
-   kubectl exec -it api-pod -- npm run db:test-connection
-   ```
-
-4. **Image Pull Errors**
-   ```bash
-   kubectl describe pod <pod-name>
-   # Check imagePullSecrets
-   ```
-
-### Debug Commands
+#### 1. Services Not Starting
 
 ```bash
-# Get all resources
-kubectl get all -n credit-decision
+# Check logs
+docker-compose logs
 
-# Describe problematic resource
-kubectl describe <resource-type> <resource-name>
+# Check resource usage
+docker stats
 
-# Get events
-kubectl get events --sort-by=.metadata.creationTimestamp
-
-# Port forward for debugging
-kubectl port-forward pod/<pod-name> 3001:3001
-
-# Execute commands in pod
-kubectl exec -it <pod-name> -- /bin/sh
+# Restart services
+docker-compose restart
 ```
 
-## Security Considerations
+#### 2. Database Connection Issues
 
-### Network Policies
+```bash
+# Check database status
+docker-compose exec postgres pg_isready -U postgres
 
-```yaml
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: api-network-policy
-spec:
-  podSelector:
-    matchLabels:
-      app: api
-  policyTypes:
-  - Ingress
-  - Egress
-  ingress:
-  - from:
-    - podSelector:
-        matchLabels:
-          app: web
-    ports:
-    - protocol: TCP
-      port: 3001
+# Check connection from API
+docker-compose exec api npm run db:test
 ```
 
-### Pod Security Standards
+#### 3. Memory Issues
 
-```yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: api-pod
-spec:
-  securityContext:
-    runAsNonRoot: true
-    runAsUser: 1001
-    fsGroup: 1001
-  containers:
-  - name: api
-    securityContext:
-      allowPrivilegeEscalation: false
-      readOnlyRootFilesystem: true
-      capabilities:
-        drop:
-        - ALL
+```bash
+# Check memory usage
+docker stats
+
+# Increase memory limits in docker-compose.yml
 ```
 
-## Performance Optimization
+#### 4. SSL Certificate Issues
 
-### Resource Limits
+```bash
+# Verify certificate
+openssl x509 -in ssl/cert.pem -text -noout
 
-```yaml
-resources:
-  requests:
-    memory: "256Mi"
-    cpu: "250m"
-  limits:
-    memory: "512Mi"
-    cpu: "500m"
+# Check certificate expiry
+openssl x509 -in ssl/cert.pem -noout -dates
 ```
 
-### Caching Strategy
+### Performance Optimization
 
-- Redis for session storage
-- Application-level caching
-- CDN for static assets
-- Database query optimization
+#### 1. Database Optimization
+
+```sql
+-- Check slow queries
+SELECT query, mean_time, calls 
+FROM pg_stat_statements 
+ORDER BY mean_time DESC 
+LIMIT 10;
+
+-- Analyze table statistics
+ANALYZE;
+```
+
+#### 2. Redis Optimization
+
+```bash
+# Check Redis memory usage
+docker-compose exec redis redis-cli info memory
+
+# Monitor Redis performance
+docker-compose exec redis redis-cli monitor
+```
+
+#### 3. Application Optimization
+
+- Enable caching
+- Optimize database queries
+- Use connection pooling
+- Configure proper resource limits
+
+### Getting Help
+
+1. Check the logs first
+2. Review the configuration
+3. Consult the troubleshooting section
+4. Check GitHub issues
+5. Contact support team
+
+## Security Checklist
+
+- [ ] Strong passwords configured
+- [ ] SSL certificates installed
+- [ ] Firewall rules configured
+- [ ] Rate limiting enabled
+- [ ] CORS properly configured
+- [ ] Secrets properly managed
+- [ ] Regular security updates
+- [ ] Backup strategy implemented
+- [ ] Monitoring configured
+- [ ] Access controls implemented
 
 ## Maintenance
 
 ### Regular Tasks
 
-- Update dependencies
-- Rotate secrets
-- Update SSL certificates
-- Database maintenance
-- Log rotation
-- Backup verification
+1. **Daily**: Check service health and logs
+2. **Weekly**: Review metrics and performance
+3. **Monthly**: Update dependencies and security patches
+4. **Quarterly**: Review and update configurations
 
-### Scheduled Maintenance
+### Updates
 
 ```bash
-# Schedule maintenance window
-kubectl cordon <node-name>
-kubectl drain <node-name> --ignore-daemonsets
+# Pull latest images
+docker-compose pull
 
-# Perform maintenance
-# ...
+# Restart with new images
+docker-compose up -d
 
-# Resume normal operation
-kubectl uncordon <node-name>
+# For Kubernetes
+kubectl set image deployment/api api=credit-decision-api:new-tag -n credit-decision
 ```
+
+This deployment guide should help you successfully deploy and maintain the Credit Decision LLM RAG Platform in your environment.
