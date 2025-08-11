@@ -1,4 +1,4 @@
-# Credit Decision LLM RAG Platform | In progress! 🔄
+# Credit Decision LLM RAG Platform | *In progress!* 🔄
 
 ### Linguagens e Frameworks
 ![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=flat-square&logo=node.js)
