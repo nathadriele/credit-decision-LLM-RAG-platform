@@ -1,0 +1,64 @@
+{
+  "name": "credit-decision-llm-rag",
+  "version": "1.0.0",
+  "description": "AI-powered credit decision platform with RAG capabilities",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "type-check": "turbo run type-check",
+    "clean": "turbo run clean",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "k8s:deploy": "kubectl apply -f k8s/",
+    "infra:deploy": "cd infrastructure && terraform apply",
+    "test:e2e": "playwright test",
+    "db:migrate": "cd apps/api && npm run db:migrate",
+    "db:seed": "cd apps/api && npm run db:seed",
+    "build:packages": "turbo run build --filter='./packages/*'",
+    "build:api": "turbo run build --filter='./apps/api'",
+    "build:web": "turbo run build --filter='./apps/web'"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "eslint": "^8.54.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-prettier": "^5.0.1",
+    "prettier": "^3.1.0",
+    "turbo": "^1.11.0",
+    "typescript": "^5.3.0",
+    "@playwright/test": "^1.40.0",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.2.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/credit-decision-llm-rag.git"
+  },
+  "keywords": [
+    "ai",
+    "llm",
+    "rag",
+    "credit-decision",
+    "fintech",
+    "machine-learning",
+    "langchain",
+    "openai",
+    "aws-bedrock"
+  ],
+  "author": "Your Organization",
+  "license": "MIT"
+}
