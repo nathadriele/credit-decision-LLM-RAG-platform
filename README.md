@@ -1,4 +1,4 @@
-# Credit Decision LLM RAG Platform | *In progress!* 🔄
+# Credit Decision LLM RAG Platform
 
 ### Linguagens e Frameworks
 ![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=flat-square&logo=node.js)
@@ -341,39 +341,9 @@ npm test
 - **Enterprise Support**: Professional support available
 
 ### Contact
-- **Email**: support@creditdecision.com
-- **Website**: https://creditdecision.com
+- **Email**: supportadriele@creditdecision.com
+- **Website**: https://creditdecisionadriele.com
 - **Documentation**: https://docs.creditdecision.com
-
-## Roadmap
-
-### Current Version (v1.0)
-- Core credit decision engine
-- RAG-powered AI insights
-- Web dashboard and API
-- Production deployment ready
-
-### Next Release (v1.1)
-- Advanced analytics dashboard
-- Mobile application
-- Third-party integrations
-- Enhanced AI models
-
-### Future Releases
-- Multi-tenant architecture
-- Advanced workflow automation
-- Machine learning model marketplace
-- Regulatory compliance automation
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-**Built with ❤️ by the Credit Decision | Nathalia Adriele**
-
-*Transforming financial services through AI innovation*
 
 ### Development Commands
 ```bash
@@ -385,7 +355,6 @@ npm run type-check   # TypeScript type checking
 ```
 
 ## Project Structure
-
 ```
 credit-decision-llm-rag/
 ├── apps/
@@ -454,14 +423,12 @@ npm run infra:deploy
 ```
 
 ## Monitoring & Observability
-
 - **Application Metrics**: Grafana dashboards
 - **Infrastructure Monitoring**: Dynatrace
 - **Logs**: CloudWatch + structured logging
 - **Alerts**: Proactive monitoring setup
 
 ## Contributing
-
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
@@ -469,8 +436,36 @@ npm run infra:deploy
 5. Submit a pull request
 
 ## Support
-
 For technical support and questions:
 - Create an issue in this repository
+
+## Roadmap
+
+### Current Version (v1.0)
+- Core credit decision engine
+- RAG-powered AI insights
+- Web dashboard and API
+- Production deployment ready
+
+### Next Release (v1.1)
+- Advanced analytics dashboard
+- Mobile application
+- Third-party integrations
+- Enhanced AI models
+
+### Future Releases
+- Multi-tenant architecture
+- Advanced workflow automation
+- Machine learning model marketplace
+- Regulatory compliance automation
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+**Built with ❤️ by the Credit Decision | Nathalia Adriele**
+
 - Contact the development team
 - Check the [documentation](./docs/)
